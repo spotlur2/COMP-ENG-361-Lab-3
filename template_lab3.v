@@ -1,15 +1,23 @@
 // Template for Northwestern - CompEng 361 - Lab3 -- Version 1.1
-// Groupname:
-// NetIDs:
+// Groupname: Group 2
+// NetIDs: ETW0214, KAF0208
 
 // Some useful defines...please add your own
 `define WORD_WIDTH 32
 `define NUM_REGS 32
 `define OPCODE_COMPUTE    7'b0110011
+`define OPCODE_IMM        7'b0010011
 `define OPCODE_BRANCH     7'b1100011
 `define OPCODE_LOAD       7'b0000011
 `define OPCODE_STORE      7'b0100011 
 `define FUNC_ADD      3'b000
+`define FUNC_SLL      3'b001
+`define FUNC_SLT      3'b010
+`define FUNC_SLTU     3'b011
+`define FUNC_XOR      3'b100
+`define FUNC_SR       3'b101
+`define FUNC_OR       3'b110
+`define FUNC_AND      3'b111
 `define AUX_FUNC_ADD  7'b0000000
 `define AUX_FUNC_SUB  7'b0100000
 `define SIZE_BYTE  2'b00
