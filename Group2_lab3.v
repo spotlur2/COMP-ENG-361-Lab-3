@@ -2,6 +2,12 @@
 // Groupname: Group 2
 // NetIDs: ETW0214, KAF0208
 
+/*
+Vidhu Potluri wrote the Milestone A datapath, control logic, and ExecutionUnit, completed the Milestone B immediate,
+jump, and PC-alignment datapath, and debugged/verified all 56 tests using run_tests.py. 
+Michael started Milestone B by implementing the opcodes, decode wires, and instruction legality checks for lui, auipc, jal, and jalr.
+*/
+
 // Some useful defines...please add your own
 `define WORD_WIDTH 32
 `define NUM_REGS 32
@@ -26,8 +32,8 @@
 
 
 // Part B
-`define OPCODE_JAR 7'b1101111
-`define OPCODE_JAL 7'b1100111
+`define OPCODE_JAL 7'b1101111
+`define OPCODE_JALR 7'b1100111
 `define OPCODE_LUI 7'b0110111
 `define OPCODE_AUIPC 7'b0010111
 
@@ -62,16 +68,16 @@ module SingleCycleCPU(halt, clk, rst);
    wire is_branch = (opcode == `OPCODE_BRANCH);
 
    // Opcode Decode Part B
-   wire is_jal = (opcode == 'OPCODE_JAL)
-   wire is_jalr = (opcode == 'OPCODE_JALR)
-   wire is_lui = (opcode == 'OPCODE_LUI)
-   wire is_auipc = (opcode == 'OPCODE_AUIPC)
+   wire is_jal = (opcode == `OPCODE_JAL);
+   wire is_jalr = (opcode == `OPCODE_JALR);
+   wire is_lui = (opcode == `OPCODE_LUI);
+   wire is_auipc = (opcode == `OPCODE_AUIPC);
 
    // Checks Part B
-   wire valid_jal = is_jal
-   wire valid_jalr = is_jalr
-   wire valid_lui = is_lui
-   wire valid_auipc = is_auipc && (funct3 == 3'b000)
+   wire valid_jal = is_jal;
+   wire valid_jalr = is_jalr && (funct3 == 3'b000);
+   wire valid_lui = is_lui;
+   wire valid_auipc = is_auipc;
 
    // Checks
    wire valid_rtype_f7 = ((funct3 == `FUNC_ADD) || (funct3 == `FUNC_SR)) ?
@@ -99,6 +105,8 @@ module SingleCycleCPU(halt, clk, rst);
    wire [`WORD_WIDTH-1:0] imm_i = {{20{InstWord[31]}}, InstWord[31:20]};
    wire [`WORD_WIDTH-1:0] imm_s = {{20{InstWord[31]}}, InstWord[31:25], InstWord[11:7]};
    wire [`WORD_WIDTH-1:0] imm_b = {{19{InstWord[31]}}, InstWord[31], InstWord[7], InstWord[30:25], InstWord[11:8], 1'b0};
+   wire [`WORD_WIDTH-1:0] imm_u = {InstWord[31:12], 12'b0};
+   wire [`WORD_WIDTH-1:0] imm_j = {{11{InstWord[31]}}, InstWord[31], InstWord[19:12], InstWord[20], InstWord[30:21], 1'b0};
 
    // Memory Address
    assign DataAddr  = Rdata1 + (is_store ? imm_s : imm_i);
@@ -111,7 +119,8 @@ module SingleCycleCPU(halt, clk, rst);
    wire misaligned_mem  = mem_access && (misaligned_half || misaligned_word);
 
    // Only support R-TYPE ADD and SUB
-   assign halt = invalid_op || misaligned_mem;
+   wire misaligned_pc = (|PC[1:0]) || (|NPC[1:0]);
+   assign halt = invalid_op || misaligned_mem || misaligned_pc; //checks for pc now
      
    // System State 
    Mem   MEM(.InstAddr(PC), .InstOut(InstWord), 
@@ -132,7 +141,7 @@ module SingleCycleCPU(halt, clk, rst);
    assign funct7 = InstWord[31:25];  // R-Type
 
    assign MemWrEn = valid_store && !halt;
-   assign RWrEn   = (valid_rtype || valid_itype || valid_load) && !halt;
+   assign RWrEn   = (valid_rtype || valid_itype || valid_load || valid_jal || valid_jalr || valid_lui || valid_auipc) && !halt;
 
    // Hardwired to support R-Type instructions -- please add muxes and other control signals
    wire [`WORD_WIDTH-1:0] eu_opB  = is_rtype ? Rdata2 : imm_i;
@@ -150,7 +159,13 @@ module SingleCycleCPU(halt, clk, rst);
                                       (funct3 == 3'b101) ? {16'b0, DataWord[15:0]}              :
                                                            DataWord;
 
-   assign RWrdata = valid_load ? load_data : alu_out;
+   wire [`WORD_WIDTH-1:0] auipc_out = PC + imm_u;
+   
+   assign RWrdata = valid_lui ? imm_u :
+                 valid_auipc ? auipc_out :
+                 (valid_jal || valid_jalr) ? PC_Plus_4 :
+                 valid_load ? load_data :
+                              alu_out;
 
    // Branch Comparison & Fetch Address Datapath
    wire [`WORD_WIDTH-1:0] br_diff = Rdata1 - Rdata2;
@@ -167,8 +182,14 @@ module SingleCycleCPU(halt, clk, rst);
                                         1'b0;
 
    // Fetch Address Datapath
+   wire [`WORD_WIDTH-1:0] jal_target = PC + imm_j;
+   wire [`WORD_WIDTH-1:0] jalr_raw  = Rdata1 + imm_i;
+   wire [`WORD_WIDTH-1:0] jalr_target = {jalr_raw[31:1], 1'b0};
    assign PC_Plus_4 = PC + 4;
-   assign NPC = (valid_branch && br_taken) ? (PC + imm_b) : PC_Plus_4;
+   assign NPC = valid_jal ? jal_target  :
+             valid_jalr ? jalr_target :
+             (valid_branch && br_taken) ? (PC + imm_b) :
+                                          PC_Plus_4;
    
 endmodule // SingleCycleCPU
 
