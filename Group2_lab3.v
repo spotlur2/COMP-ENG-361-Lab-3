@@ -67,6 +67,12 @@ module SingleCycleCPU(halt, clk, rst);
    wire is_lui = (opcode == 'OPCODE_LUI)
    wire is_auipc = (opcode == 'OPCODE_AUIPC)
 
+   // Checks Part B
+   wire valid_jal = is_jal
+   wire valid_jalr = is_jalr
+   wire valid_lui = is_lui
+   wire valid_auipc = is_auipc && (funct3 == 3'b000)
+
    // Checks
    wire valid_rtype_f7 = ((funct3 == `FUNC_ADD) || (funct3 == `FUNC_SR)) ?
                          ((funct7 == `AUX_FUNC_ADD) || (funct7 == `AUX_FUNC_SUB)) :
@@ -84,7 +90,10 @@ module SingleCycleCPU(halt, clk, rst);
    wire valid_branch   = is_branch & ((funct3 == 3'b000) || (funct3 == 3'b001) || (funct3 == 3'b100) ||
                                       (funct3 == 3'b101) || (funct3 == 3'b110) || (funct3 == 3'b111));
 
-   assign invalid_op   = !(valid_rtype || valid_itype || valid_load || valid_store || valid_branch);
+   assign invalid_op   = !(valid_rtype || valid_itype || valid_load || valid_store || valid_branch
+                           || valid_jal || valid_jalr || valid_lui || valid_auipc);
+
+   
 
    // Immediate Generation
    wire [`WORD_WIDTH-1:0] imm_i = {{20{InstWord[31]}}, InstWord[31:20]};
