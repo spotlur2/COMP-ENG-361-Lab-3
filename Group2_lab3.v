@@ -24,6 +24,15 @@
 `define SIZE_HWORD 2'b01
 `define SIZE_WORD  2'b10
 
+
+// Part B
+`define OPCODE_JAR 7'b1101111
+`define OPCODE_JAL 7'b1100111
+`define OPCODE_LUI 7'b0110111
+`define OPCODE_AUIPC 7'b0010111
+
+
+
 module SingleCycleCPU(halt, clk, rst);
    output halt;
    input clk, rst;
@@ -51,6 +60,12 @@ module SingleCycleCPU(halt, clk, rst);
    wire is_load   = (opcode == `OPCODE_LOAD);
    wire is_store  = (opcode == `OPCODE_STORE);
    wire is_branch = (opcode == `OPCODE_BRANCH);
+
+   // Opcode Decode Part B
+   wire is_jal = (opcode == 'OPCODE_JAL)
+   wire is_jalr = (opcode == 'OPCODE_JALR)
+   wire is_lui = (opcode == 'OPCODE_LUI)
+   wire is_auipc = (opcode == 'OPCODE_AUIPC)
 
    // Checks
    wire valid_rtype_f7 = ((funct3 == `FUNC_ADD) || (funct3 == `FUNC_SR)) ?
